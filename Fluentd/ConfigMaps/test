@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: template-json
+data:
+  template.json: |
+    {
+      "index_patterns": [ "fluentd-*" ],
+      "settings": {
+          "index": {
+            "lifecycle": {
+              "rollover_alias": "fluentd-alias"
+            },
+            "number_of_replicas": "0"
+          }
+      }
+    }
+
+  template.json: |
+    {
+      "index_patterns": [ "fluentd-*" ],
+      "settings": {
+          "index": {
+            "number_of_replicas": "0",
+            "lifecycle": {
+              "rollover_alias": "fluentd-alias"
+            }
+          }
+      },
+      "aliases": {
+        "fluentd-alias": {
+          "is_write_index": true 
+        }
+      }
+    }
