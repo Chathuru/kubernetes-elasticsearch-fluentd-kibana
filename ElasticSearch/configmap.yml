@@ -6,13 +6,9 @@ data:
   elasticsearch.yml: |
     cluster.name: blt
     node.name: master
-    #node.attr.rack: r1
     path.data: /var/lib/elastisearch
     path.logs: /var/log/elastisearch
-    #bootstrap.memory_lock: true
     network.host: [_local_, _site_]
-    #http.port: 9200
-    #discovery.seed_hosts: [_site_]
     cluster.initial_master_nodes: ["master"]
     #action.destructive_requires_name: true
     node.master: true
