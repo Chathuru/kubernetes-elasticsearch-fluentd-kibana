@@ -12,6 +12,15 @@ spec:
       labels:
         app: elastisearch
     spec:
+      initContainers:
+      - name: init
+        image: alpine
+        command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
       containers:
       - name: elastisearch
         image: elasticsearch:7.12.0
