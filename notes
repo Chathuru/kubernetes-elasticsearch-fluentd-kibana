@@ -1,0 +1,11 @@
+docker run -p 9200:9200 -p 9300:9300 \
+-e "cluster.name=xapihub" \
+-e "node.name=master" \
+-e "discovery.type=single-node" \
+-e "xpack.security.enabled=true" \
+-e "xpack.security.authc.realms.file.file1.order=0" \
+-v $PWD/users:/usr/share/elasticsearch/config/users \
+-v $PWD/users_roles:/usr/share/elasticsearch/config/users_roles  docker.elastic.co/elasticsearch/elasticsearch:7.15.2
+
+
+-e "network.host=_local_, _site_" \
