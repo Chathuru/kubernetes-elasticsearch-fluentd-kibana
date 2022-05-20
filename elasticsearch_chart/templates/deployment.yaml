@@ -4,6 +4,7 @@ metadata:
   name: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       {{- include "elasticsearch.selectorLabels" . | nindent 6 }}
@@ -29,75 +30,6 @@ spec:
       - name: {{ .Chart.Name }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        readinessProbe:
-          exec:
-            command:
-              - bash
-              - -c
-              - |
-                set -e
-
-                # Exit if ELASTIC_PASSWORD in unset
-                if [ -z "${ELASTIC_PASSWORD}" ]; then
-                  echo "ELASTIC_PASSWORD variable is missing, exiting"
-                  exit 1
-                fi
-
-                # If the node is starting up wait for the cluster to be ready (request params: "wait_for_status=green&timeout=1s" )
-                # Once it has started only check that the node itself is responding
-                START_FILE=/tmp/.es_start_file
-
-                # Disable nss cache to avoid filling dentry cache when calling curl
-                # This is required with Elasticsearch Docker using nss < 3.52
-                export NSS_SDB_USE_CACHE=no
-
-                http () {
-                  local path="${1}"
-                  local args="${2}"
-                  set -- -XGET -s
-
-                  if [ "$args" != "" ]; then
-                    set -- "$@" $args
-                  fi
-
-                  set -- "$@" -u "elastic:${ELASTIC_PASSWORD}"
-
-                  curl --output /dev/null -k "$@" "https://127.0.0.1:9200${path}"
-                }
-
-                if [ -f "${START_FILE}" ]; then
-                  echo 'Elasticsearch is already running, lets check the node is healthy'
-                  HTTP_CODE=$(http "/" "-w %{http_code}")
-                  RC=$?
-                  if [[ ${RC} -ne 0 ]]; then
-                    echo "curl --output /dev/null -k -XGET -s -w '%{http_code}' \${BASIC_AUTH} https://127.0.0.1:9200/ failed with RC ${RC}"
-                    exit ${RC}
-                  fi
-                  # ready if HTTP code 200, 503 is tolerable if ES version is 6.x
-                  if [[ ${HTTP_CODE} == "200" ]]; then
-                    exit 0
-                  elif [[ ${HTTP_CODE} == "503" && "8" == "6" ]]; then
-                    exit 0
-                  else
-                    echo "curl --output /dev/null -k -XGET -s -w '%{http_code}' \${BASIC_AUTH} https://127.0.0.1:9200/ failed with HTTP code ${HTTP_CODE}"
-                    exit 1
-                  fi
-
-                else
-                  echo 'Waiting for elasticsearch cluster to become ready (request params: "wait_for_status=green&timeout=1s" )'
-                  if http "/_cluster/health?wait_for_status=green&timeout=1s" "--fail" ; then
-                    touch ${START_FILE}
-                    exit 0
-                  else
-                    echo 'Cluster is not yet ready (request params: "wait_for_status=green&timeout=1s" )'
-                    exit 1
-                  fi
-                fi
-          failureThreshold: 3
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          successThreshold: 3
-          timeoutSeconds: 5
         securityContext:
           {{- toYaml .Values.securityContext | nindent 12 }}
         env:
@@ -108,11 +40,21 @@ spec:
         - name: cluster.name
           value: {{ .Values.clusterName | quote }}
         volumeMounts:
+        - name: esdata
+          mountPath: /var/lib/elastisearch
         {{- range $path, $config := .Values.esConfig }}
         - name: esconfig
           mountPath: /usr/share/elasticsearch/config/{{ $path }}
           subPath: {{ $path }}
         {{- end }}
+        readinessProbe:
+          tcpSocket:
+            port: 9200
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 3
+          timeoutSeconds: 5
         ports:
         - name: http
           containerPort: {{ .Values.service.httpPort }}
@@ -124,3 +66,12 @@ spec:
       - name: esconfig
         configMap:
           name: {{ .Release.Name }}-config
+      - name: esdata
+        emptyDir: {}
+#        awsElasticBlockStore:
+#          volumeID: ""
+#          fsType: ext4
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}

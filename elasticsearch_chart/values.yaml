@@ -5,7 +5,7 @@ replicaCount: 1
 image:
   repository: docker.elastic.co/elasticsearch/elasticsearch
   pullPolicy: IfNotPresent
-  tag: 7.15.2
+  tag: 7.15.2-amd64
 
 podSecurityContext:
   fsGroup: 1000
@@ -29,21 +29,24 @@ esConfig:
     discovery.type: single-node
     network.host: [_local_, _site_]
     node.roles: [master, data, ingest]
-    xpack.security.enabled: true
-    xpack.security.authc.realms:
-      file.file1:
-        order: 0
-      native.native1:
-        order: 1
-  users: |
-    admin:$2a$10$xTM4rWqLS7swI41jUQEOa.lsKQ66qftxKVBAQyEx4gY7Y5eYfUNGu
-  users_roles: |
-    superuser:admin
+#    xpack.security.enabled: true
+#    xpack.security.authc.realms:
+#      file.file1:
+#        order: 0
+#      native.native1:
+#        order: 1
+#  users: |
+#    admin:$2a$10$1Pp6w8uku7sCDyDn/LIv3OF098l73KIKPuY.sRYeHBlq4S9FT3GLu
+#  users_roles: |
+#    superuser:admin
 
-resources: {}
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+resources:
+   limits:
+     cpu: 1000m
+     memory: 1024Mi
+   requests:
+     cpu: 500m
+     memory: 512Mi
+
+nodeSelector: {}
+#  failure-domain.beta.kubernetes.io/zone: us-east-1b
